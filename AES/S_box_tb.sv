@@ -30,17 +30,17 @@ module S_box_tb;
 
         // Run a few address checks
         for (int i = 0; i < 4; i++) begin
-            addr = i[7:0];
+            in = i[7:0];
             #5;
-            if (data_out === expected[i])
-                $display("PASS: Addr=%02h -> Data=%02h", addr, data_out);
+            if (out === expected[i])
+                $display("PASS: in=%02h -> Data=%02h", in, out);
             else
-                $display("FAIL: Addr=%02h -> Data=%02h (Expected=%02h)", addr, data_out, expected[i]);
+                $display("FAIL: in=%02h -> Data=%02h (Expected=%02h)", in, out, expected[i]);
         end
 
         // Optional random test (unverified)
         in = 8'h10; #5;
-        $display("INFO: Addr=%02h -> Data=%02h", in, out);
+        $display("INFO: in=%02h -> Data=%02h", in, out);
 
         $display("==== AES S-BOX ROM TEST COMPLETE ====");
         $finish;
