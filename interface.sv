@@ -15,7 +15,7 @@ logic [31:0] HADDR;
 logic [2:0] HBURST;
 logic HMASTLOCK;
 logic [6:0] HPROT;
-logic [2:0] HSIZE;
+logic [1:0] HSIZE; // because the max size we can transfer is 32bits in one cycle
 logic [1:0] HTRANS;
 logic [31:0] HWDATA;
 logic [3:0] HWSTRB;
