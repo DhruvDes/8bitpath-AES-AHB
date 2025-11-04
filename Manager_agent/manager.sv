@@ -23,12 +23,38 @@ class m_a_transaction extends uvm_sequence_item;
   endfunction
   
   
-  rand logic [2:0] size;
-  rand logic [31:0] addr;
-  rand logic [31:0] dataQ[$];
-  rand logic wr_rd;
-  rand burst_t burst;
-  rand bit [4:0] length;
+
+  rand bit [31:0] addr;
+  rand bit [31:0] dataQ[$];
+  rand bit [2:0]  size;
+  rand bit [6:0]  prot;
+  rand bit [4:0]  length;
+  rand burst_t    burst;
+  rand bit        wr_rd;
+  rand bit        excl;
+  rand bit        nonsec;
+  rand bit        mastlock;
+
+// responds from subor
+  bit [1:0] resp;
+  bit       exokay;
+  bit [31:0]rdata; 
+  
+  `uvm_object_utils_begin(m_a_transaction)
+    `uvm_field_int      (addr,      UVM_DEFAULT)
+    `uvm_field_queue_int(dataQ,     UVM_DEFAULT)
+    `uvm_field_int      (size,      UVM_DEFAULT)
+    `uvm_field_int      (prot,      UVM_DEFAULT)
+    `uvm_field_int      (length,    UVM_DEFAULT)
+    `uvm_field_enum     (burst_t, burst, UVM_DEFAULT)
+    `uvm_field_int      (wr_rd,     UVM_DEFAULT)
+    `uvm_field_int      (excl,      UVM_DEFAULT)
+    `uvm_field_int      (nonsec,    UVM_DEFAULT)
+    `uvm_field_int      (mastlock,  UVM_DEFAULT)
+    `uvm_field_int      (resp,      UVM_DEFAULT)
+    `uvm_field_int      (exokay,    UVM_DEFAULT)
+  `uvm_object_utils_end
+
   
   constraint burst_lenght_c {
   		
@@ -44,20 +70,18 @@ class m_a_transaction extends uvm_sequence_item;
   };
   
   
-  `uvm_object_utils_begin(m_a_transaction)
- 		
-  `uvm_field_int(addr, UVM_DEFAULT)
-  `uvm_field_queue_int(dataQ, UVM_DEFAULT)
-  `uvm_field_int(wr_rd, UVM_DEFAULT)
-  `uvm_field_enum(burst_t,burst, UVM_DEFAULT)
-  	
- 
+  function void calc_wrap_bound();
+    txsize = len * (2**size);
+    lower_wrap_addr = addr - (addr % txsize);
+    upper_wrap_addr = addr + txsize -1;
+  endfunction
   
-  `uvm_object_utils_end
   
-
   
-endclass 
+  
+  
+  
+endclass  : m_a_transaction
 
 
 
