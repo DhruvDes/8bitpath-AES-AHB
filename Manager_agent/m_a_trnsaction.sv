@@ -1,19 +1,5 @@
-`include "uvm_macros.svh"
-import uvm_pkg :: *;
-
-
-enum  {active, passive} active_passive_agent = active;
-
-typedef enum bit [2:0] {
-	SINGLE = 3'b0,
-  	INCR = 3'b001,
-  	WRAP4 = 3'b010,
-  	INCR4 = 3'b011,
-  	WRAP8 = 3'b100,
-  	INCR8 = 3'b101,
-  	WRAP16 = 3'b110,
-  	INCR16 = 3'b111
-} burst_t;
+// `include "uvm_macros.svh"
+// import uvm_pkg :: *;
 
 
 class m_a_transaction extends uvm_sequence_item;
@@ -53,8 +39,16 @@ class m_a_transaction extends uvm_sequence_item;
     `uvm_field_int      (mastlock,  UVM_DEFAULT)
     `uvm_field_int      (resp,      UVM_DEFAULT)
     `uvm_field_int      (exokay,    UVM_DEFAULT)
+    `uvm_field_int      (rdata,     UVM_DEFAULT)  
   `uvm_object_utils_end
 
+  
+  constraint allowed_burst {
+  	burst != WRAP4;
+    burst != WRAP8;
+    burst != WRAP16;
+  
+  };
   
   constraint burst_lenght_c {
   		
@@ -70,67 +64,13 @@ class m_a_transaction extends uvm_sequence_item;
   };
   
   
+  int txsize, lower_wrap_addr, upper_wrap_addr;
+  
   function void calc_wrap_bound();
-    txsize = len * (2**size);
+    txsize = length * (2**size);
     lower_wrap_addr = addr - (addr % txsize);
     upper_wrap_addr = addr + txsize -1;
   endfunction
-  
-  
-  
-  
-  
+ 
   
 endclass  : m_a_transaction
-
-
-
-
-class m_a_sequence extends uvm_sequence #(m_a_transaction);
-  `uvm_object_utils(m_a_sequence)  
-  
-  function new(string name = "m_a_sequence");
-    super.new(name);
-  endfunction
-  
-  
-  
-  task run_phases(uvm_phase phase);
-  
-  endtask
-  
-endclass
-
-
-
-class m_a_driver extends uvm_driver;
-  `uvm_component_utils(m_a_driver)
-  
-  function new(string name = "m_a_transaction", uvm_component parent = null);
-    super.new(name, parent);
-  endfunction
-  
-endclass
-
-
-
-class m_a_monitor extends uvm_monitor;
-  `uvm_component_utils(m_a_monitor)
-  
-  function new(string name = "m_a_monitor", uvm_component parent = null);
-    super.new(name, parent);
-  endfunction
-  
-endclass
-
-
-
-class m_a_scoreboard extends uvm_scoreboard;
-  `uvm_component_utils(m_a_scoreboard)
-  
-  function new(string name = "m_a_scoreboard", uvm_component parent = null);
-    super.new(name, parent);
-  endfunction
-  
-endclass
-
