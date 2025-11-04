@@ -1,8 +1,21 @@
 # AHB_Interface
 
 - Protocol: AMBA AHB-Lite
-- Signals: HCLK, HRESETn, HADDR, HWRITE, HTRANS, HSIZE, HWDATA, HRDATA, HREADY, HRESP
-- Status: initial scaffolding
+- Signals:
+  1. Global Signals
+  - HCLK 
+  - HRESETn
+  2. Main to Sub
+  - HADDR 
+  - HWRITE 
+  - HTRANS 
+  - HSIZE 
+  - HWDATA
+  - HBURST
+  3. Sub to Main
+  - HRDATA 
+  - HREADY 
+  - HRESP
 
 ## TODO
 - Add RTL and testbench
