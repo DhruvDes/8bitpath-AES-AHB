@@ -43,7 +43,7 @@ class m_a_transaction extends uvm_sequence_item;
   `uvm_object_utils_end
 
   
-  constraint allowed_burst {
+  constraint disable_burst_wrap {
   	burst != WRAP4;
     burst != WRAP8;
     burst != WRAP16;
@@ -63,7 +63,19 @@ class m_a_transaction extends uvm_sequence_item;
     dataQ.size() == length;
   };
   
+  constraint alignd_only {
+      addr % (2 ** size) == 0;
+  };
+
+
+  constraint burst_default {
+      soft burst == INCR4; // default INCR4 
+  };
+  constraint burst_default {
+      soft size == 2; // 32 bit bus
+  };
   
+  constraint burst_weights {burst dist {INCR4:=10, INCR8:=10, INCR16:=10, SINGLE:=5};};
   int txsize, lower_wrap_addr, upper_wrap_addr;
   
   function void calc_wrap_bound();
@@ -72,5 +84,8 @@ class m_a_transaction extends uvm_sequence_item;
     upper_wrap_addr = addr + txsize -1;
   endfunction
  
-  
+  function void post_randomize();
+    calc_wrap_bound();
+  endfunction  
+
 endclass  : m_a_transaction
