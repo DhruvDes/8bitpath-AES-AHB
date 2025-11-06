@@ -1,5 +1,5 @@
 //--------------------------------------------------
-// File name: aes_sbox.sv
+//File name: aes_sbox.sv
 //Author : chirranjeavi Moorthi
 //Author : Email:cm685@nyu.endmodule
 //Department: Computer Engineering 
