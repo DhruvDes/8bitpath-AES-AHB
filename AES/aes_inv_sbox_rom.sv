@@ -1,7 +1,7 @@
 //--------------------------------------------------
 //File name: aes_inv_sbox_rom.sv
 //Author : chirranjeavi Moorthi
-//Author : Email:cm685@nyu.endmodule
+//Author : Email:cm685@nyu.edu
 //Department: Computer Engineering 
 //--------------------------------------------------
 //Release History
