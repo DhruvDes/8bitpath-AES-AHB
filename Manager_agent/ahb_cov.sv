@@ -1,23 +1,23 @@
 class ahb_cov extends uvm_subscriber#(m_a_transaction);
+  `uvm_component_utils(ahb_cov)
 
-`uvm_component_utils(ahb_cov)
+  m_a_transaction trn;
 
-m_a_transaction trn; 
-covergroup ahb_cg@(ahb_e);
- coverpoint  trn.wr_rd;
-endgroup 
+  // Covergroup definition (manual sampling)
+  covergroup ahb_cg;
+    coverpoint trn.wr_rd;
+  endgroup
 
-function new (string name = null, uvm_component parent = null);
-    super.new(name,parent);
+  // Constructor
+  function new(string name = "ahb_cov", uvm_component parent = null);
+    super.new(name, parent);
     ahb_cg = new();
-endfunction 
+  endfunction
 
-virtual function void Writer(T t);
-$cast(trn, t);
-ahb_cg.sample();
-endfunction
-
-
-
+  // Proper implementation of pure virtual method 'write'
+  virtual function void write(m_a_transaction t);
+    $cast(trn, t);
+    ahb_cg.sample();
+  endfunction
 
 endclass

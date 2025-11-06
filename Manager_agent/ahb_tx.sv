@@ -66,12 +66,12 @@ class m_a_transaction extends uvm_sequence_item;
   constraint alignd_only {
       addr % (2 ** size) == 0;
   };
-
+  
 
   constraint burst_default {
       soft burst == INCR4; // default INCR4 
   };
-  constraint burst_default {
+  constraint beat_default {
       soft size == 2; // 32 bit bus
   };
   
