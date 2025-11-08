@@ -1,9 +1,19 @@
-module aes_8_bit (rst, clk, key_in, d_in, d_out, d_vld);
+`include "aes_data_path.v"
+`include "byte_permutation_unit.v"
+`include "key_expansion.v"
+`include "mixcolumn.v"
+`include "mux.v"
+`include "parallel_serial_converter.v"
+`include "sbox_case_4.v"
+
+
+module aes_8_bit (rst, clk, key_in, d_in, d_out, d_vld, DONE);
     input rst, clk;
     input [7:0] key_in;
     input [7:0] d_in;
     output [7:0] d_out;
     output reg d_vld;
+  	output logic DONE;
 
     //key scheduler controller
     wire [3:0] round_cnt_w;
@@ -20,6 +30,7 @@ module aes_8_bit (rst, clk, key_in, d_in, d_out, d_vld);
     wire [7:0] mc_en;
     reg [7:0] d_out;
     wire [7:0] d_out_w;
+  	logic [3:0] Internal_count;
 
     always @ (posedge clk)
     begin
@@ -43,10 +54,12 @@ module aes_8_bit (rst, clk, key_in, d_in, d_out, d_vld);
     //state machine for key schedule
     always @ (posedge clk)
     begin
-        if (rst == 1'b1)
+      if (rst == 1'b1) 
         begin
-            state <= load;
-            cnt <= 4'h0;
+          Internal_count <= 'h0;
+          DONE <= 0;
+          state <= load;
+          cnt <= 4'h0;
         end
         else
         begin
@@ -261,9 +274,14 @@ module aes_8_bit (rst, clk, key_in, d_in, d_out, d_vld);
         end
         else
         begin
-            if (round_cnt == 8'h90)
+          if (round_cnt >= 8'h90)
             begin
                 d_vld <= 1'b1;
+                Internal_count <= Internal_count + 1;
+              
+              if (Internal_count == 15)begin 
+              		DONE <= 1;
+              end 
             end
         end
     end

@@ -1,3 +1,5 @@
+// Code your testbench here
+// or browse Examples
 `timescale 1ns/1ns
 
 module aes_tb;
@@ -7,20 +9,23 @@ module aes_tb;
     reg [7:0] d_in;
     wire [7:0] d_out;
     wire d_vld;
+  	wire DONE;
     parameter CP = 20;
 
     //Two test vectors
     //Simple example
-    //CT = 0x69c4e0d86a7b0430d8cdb78070b4c55a
+            
+    parameter CT  = 128'h69c4e0d86a7b0430d8cdb78070b4c55a;
     parameter kin = 128'h000102030405060708090a0b0c0d0e0f;
     parameter din = 128'h00112233445566778899aabbccddeeff;
+  logic [127:0] answer = '0;
 
     //Example in FIPS-197
     //CT = 0x3925841d02dc09fbdc118597196a0b32
     //parameter kin = 128'h2b7e151628aed2a6abf7158809cf4f3c;
     //parameter din = 128'h3243f6a8885a308d313198a2e0370734;
 
-    aes_8_bit test (rst, clk, key_in, d_in, d_out, d_vld);
+  aes_8_bit test (rst, clk, key_in, d_in, d_out, d_vld, DONE);
 
     always # (CP/2)
     begin
@@ -96,6 +101,24 @@ module aes_tb;
         #CP
         key_in = kin[7:0];
         d_in = din[7:0];
+      
+      
+      wait(d_vld);
+      repeat(16) @ (posedge clk) answer = {answer[120:0],d_out};
+ 
+      wait(DONE);
+//       @ (posedge clk) answer = {answer[120:0],d_out};
+      if (answer == CT) $display("All_clear");
+      else begin $display("Error with comparision"); 
+        $display("Expec: %0h", CT);
+        $display("Recvd: %0h", answer);
+      end
+      $finish();
     end
+  
+  initial begin 
+    $dumpvars();
+    $dumpfile("dump.vcd");
+  end
 endmodule
 
