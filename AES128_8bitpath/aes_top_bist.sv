@@ -91,7 +91,7 @@ module aes_top_bist(
   assign d_out = is_bist ? misr_to_data_out : device_to_data_out;
   
   
-  
+  // output for ROM is 0xC0;
   
   
   

@@ -1,71 +1,62 @@
-module key_expansion(key_in, rk_delayed_out, round_cnt, rk_last_out, clk, input_sel, sbox_sel, last_out_sel, bit_out_sel, rcon_en);
-    input [7:0] key_in;
-    output [7:0] rk_delayed_out;
-    output [7:0] rk_last_out;
-    input [3:0] round_cnt;
+module mixcolumn_8 (din, en, dout0, dout1, dout2, dout3, clk);
+    input [7:0] din;
+    input [7:0] en;
+    output [7:0] dout0, dout1, dout2, dout3;
     input clk;
-    input input_sel, sbox_sel, last_out_sel, bit_out_sel; 
-    input [7:0] rcon_en;
-
-    reg [7:0] r15, r14, r13, r12, r11, r10, r9, r8, r7, r6, r5, r4, r3, r2, r1, r0, r_redun;
-    wire [7:0] rcon_sbox_o, sbox_o, rcon_o, sbox_in, mux_in_o, mux_bit_o, rcon_num;
     
-    function [7:0] rcon;
-      input [3:0] x;
-        casex (x)
-          4'b0000: rcon = 8'h01;
-          4'b0001: rcon = 8'h02;
-          4'b0010: rcon = 8'h04;
-          4'b0011: rcon = 8'h08;
-          4'b0100: rcon = 8'h10;
-          4'b0101: rcon = 8'h20;
-          4'b0110: rcon = 8'h40;
-          4'b0111: rcon = 8'h80;
-          4'b1000: rcon = 8'h1b;
-          4'b1001: rcon = 8'h36;
-          default: rcon = 8'h01;
-        endcase
-    endfunction
-
-    assign rcon_num = rcon(round_cnt);
-
-
-    assign rcon_sbox_o = sbox_o ^ rcon_o;
-    assign rcon_o = rcon_en & rcon_num;
-    assign rk_delayed_out = r12;
+    reg [7:0] reg0, reg1, reg2, reg3;
+    wire [7:0] din02, din03;
     
-
-    mux2_1 mux_in (rk_last_out, key_in, mux_in_o, input_sel);
-    mux2_1 mux_sbox (r13, r_redun, sbox_in, sbox_sel); 
-    mux2_1 mux_bit ((r4 ^ rk_last_out), r4, mux_bit_o, bit_out_sel); 
-    mux2_1 mux_last_out (r0, ( r0 ^ rcon_sbox_o),  rk_last_out, last_out_sel);
-    bSbox sbox (sbox_in, sbox_o);
+    assign din02 = {din[6:4], din[3] ^ din[7], din[2] ^ din[7] , din[1], din[0] ^ din[7], din[7]};
+    assign din03 = {din[7] ^ din[6], din[6] ^ din[5], din[5] ^ din[4], din[4] ^ din[3] ^ din[7], din[3] ^ din[2] ^ din[7] , din[2] ^ din[1], din[1] ^ din[0] ^ din[7], din[0] ^ din[7]};
 
     always @ (posedge clk)
     begin
-        r15 <= mux_in_o;
-        r14 <= r15;
-        r13 <= r14;
-        r12 <= r13;
-        r11 <= r12;
-        r10 <= r11;
-        r9 <= r10;
-        r8 <= r9;
-        r7 <= r8;
-        r6 <= r7;
-        r5 <= r6;
-        r4 <= r5;
-        r3 <= mux_bit_o;
-        r2 <= r3;
-        r1 <= r2;
-        r0 <= r1;
+        reg0 <= din ^ (reg1 & en);
+        reg1 <= din ^ (reg2 & en);
+        reg2 <= din03 ^ (reg3 & en);
+        reg3 <= din02 ^ (reg0 & en);
     end
-    
-    always @ (posedge clk)
-    begin
-        if (rcon_en == 8'hff)
-        begin
-            r_redun <= r12;
-        end
-    end 
+
+    assign dout0 = reg0;
+    assign dout1 = reg1;
+    assign dout2 = reg2;
+    assign dout3 = reg3;
 endmodule
+
+
+// module inv_mixcolumn_8 (din, en, dout0, dout1, dout2, dout3, clk);
+//     input  [7:0] din;
+//     input  [7:0] en;
+//     output [7:0] dout0, dout1, dout2, dout3;
+//     input  clk;
+
+//     reg  [7:0] reg0, reg1, reg2, reg3;
+//     wire [7:0] mul2, mul4, mul8;
+//     wire [7:0] mul9, mulB, mulD, mulE;
+
+//     // Multiply by 2 in GF(2^8)
+//     assign mul2 = {din[6:4], din[3] ^ din[7], din[2] ^ din[7], din[1], din[0] ^ din[7], din[7]};
+//     // Multiply by 4 = (×2 of ×2)
+//     assign mul4 = {mul2[6:4], mul2[3] ^ mul2[7], mul2[2] ^ mul2[7], mul2[1], mul2[0] ^ mul2[7], mul2[7]};
+//     // Multiply by 8 = (×2 of ×4)
+//     assign mul8 = {mul4[6:4], mul4[3] ^ mul4[7], mul4[2] ^ mul4[7], mul4[1], mul4[0] ^ mul4[7], mul4[7]};
+
+//     // Compose inverse multipliers
+//     assign mul9 = mul8 ^ din;                 // ×9 = ×8 ⊕ ×1
+//     assign mulB = mul8 ^ mul2 ^ din;          // ×B = ×8 ⊕ ×2 ⊕ ×1
+//     assign mulD = mul8 ^ mul4 ^ din;          // ×D = ×8 ⊕ ×4 ⊕ ×1
+//     assign mulE = mul8 ^ mul4 ^ mul2;         // ×E = ×8 ⊕ ×4 ⊕ ×2
+
+//     always @(posedge clk) begin
+//         reg0 <= mulE ^ (reg1 & en);  // corresponds to 0x0E * d0 ⊕ ...
+//         reg1 <= mulB ^ (reg2 & en);  // corresponds to 0x0B * d1 ⊕ ...
+//         reg2 <= mulD ^ (reg3 & en);  // corresponds to 0x0D * d2 ⊕ ...
+//         reg3 <= mul9 ^ (reg0 & en);  // corresponds to 0x09 * d3 ⊕ ...
+//     end
+
+//     assign dout0 = reg0;
+//     assign dout1 = reg1;
+//     assign dout2 = reg2;
+//     assign dout3 = reg3;
+// endmodule

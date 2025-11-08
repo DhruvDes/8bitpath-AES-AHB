@@ -60,6 +60,7 @@ module aes_8_bit (rst, clk, key_in, d_in, d_out, d_vld, DONE);
           DONE <= 0;
           state <= load;
           cnt <= 4'h0;
+         
         end
         else
         begin
