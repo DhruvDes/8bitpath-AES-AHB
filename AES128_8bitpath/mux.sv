@@ -11,7 +11,7 @@ module mux4_1(In1, In2, In3, In4, Out, sel);
     output [7:0] Out;
     input [1:0] sel;
 
-    reg [7:0] Out_reg;
+    logic [7:0] Out_reg;
     assign Out = Out_reg;
 
     always@(*)

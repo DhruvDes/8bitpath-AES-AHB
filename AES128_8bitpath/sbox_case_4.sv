@@ -18,7 +18,7 @@ module GF_MULS_2 ( A, ab, B, cd, Y );
     input [1:0] B;
     input cd;
     output [1:0] Y;
-    wire abcd, p, q;
+    logic abcd, p, q;
     assign abcd = ~(ab & cd); /* note: ~& syntax for NAND won��t compile */
     assign p = (~(A[1] & B[1])) ^ abcd;
     assign q = (~(A[0] & B[0])) ^ abcd;
@@ -32,7 +32,7 @@ module GF_MULS_SCL_2 ( A, ab, B, cd, Y );
     input [1:0] B;
     input cd;
     output [1:0] Y;
-    wire t, p, q;
+    logic t, p, q;
     assign t = ~(A[0] & B[0]); /* note: ~& syntax for NAND won��t compile */
     assign p = (~(ab & cd)) ^ t;
     assign q = (~(A[1] & B[1])) ^ t;
@@ -43,8 +43,8 @@ endmodule
 module GF_INV_4 ( X, Y );
 input [3:0] X;
 output [3:0] Y;
-    wire [1:0] a, b, c, d, p, q;
-    wire sa, sb, sd; /* for shared factors in multipliers */
+    logic [1:0] a, b, c, d, p, q;
+    logic sa, sb, sd; /* for shared factors in multipliers */
     assign a = X[3:2];
     assign b = X[1:0];
     assign sa = a[1] ^ a[0];
@@ -79,7 +79,7 @@ module GF_MULS_4 ( A, a1, Al, Ah, aa, B, b1, Bl, Bh, bb, Q );
     input Bh;
     input bb;
     output [3:0] Q;
-    wire [1:0] ph, pl, p;
+    logic [1:0] ph, pl, p;
     GF_MULS_2 himul(A[3:2], Ah, B[3:2], Bh, ph);
     GF_MULS_2 lomul(A[1:0], Al, B[1:0], Bl, pl);
     GF_MULS_SCL_2 summul( a1, aa, b1, bb, p);
@@ -90,10 +90,10 @@ endmodule
 module GF_INV_8 ( X, Y );
     input [7:0] X;
     output [7:0] Y;
-    wire [3:0] a, b, c, d, p, q;
-    wire [1:0] sa, sb, sd; /* for shared factors in multipliers */
-    wire al, ah, aa, bl, bh, bb, dl, dh, dd; /* for shared factors */
-    wire c1, c2, c3; /* for temp var */
+    logic [3:0] a, b, c, d, p, q;
+    logic [1:0] sa, sb, sd; /* for shared factors in multipliers */
+    logic al, ah, aa, bl, bh, bb, dl, dh, dd; /* for shared factors */
+    logic c1, c2, c3; /* for temp var */
     assign a = X[7:4];
     assign b = X[3:0];
     assign sa = a[3:2] ^ a[1:0];
@@ -132,9 +132,9 @@ endmodule
 module bSbox ( A, Q );
     input [7:0] A;
     output [7:0] Q;
-    wire [7:0] B, C;
-    wire R1, R2, R3, R4, R5, R6, R7, R8, R9;
-    wire T1, T2, T3, T4, T5, T6, T7, T8, T9;
+    logic [7:0] B, C;
+    logic R1, R2, R3, R4, R5, R6, R7, R8, R9;
+    logic T1, T2, T3, T4, T5, T6, T7, T8, T9;
     /* change basis from GF(2^8) to GF(2^8)/GF(2^4)/GF(2^2) */
     /* combine with bit inverse matrix multiply of Sbox */
     assign R1 = A[7] ^ A[5] ;

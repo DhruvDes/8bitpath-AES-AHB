@@ -4,9 +4,9 @@ module byte_permutation (din, dout, c3, clk);
     input [1:0] c3;
     input clk;
 
-    wire c0, c1, c2;
-    wire [7:0] mux0_o, mux1_o, mux2_o;
-    reg [7:0] reg12, reg11, reg10, reg9, reg8, reg7, reg6, reg5, reg4, reg3, reg2, reg1;
+    logic c0, c1, c2;
+    logic [7:0] mux0_o, mux1_o, mux2_o;
+    logic [7:0] reg12, reg11, reg10, reg9, reg8, reg7, reg6, reg5, reg4, reg3, reg2, reg1;
 
     assign c0 = ~ (c3[1] | c3[0]);
     assign c1 = ~ (c3[1] | (~ c3[0])); 

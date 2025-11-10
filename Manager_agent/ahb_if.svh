@@ -1,4 +1,3 @@
-
 interface ahb_intf(input logic hclk, hresetn);
 	//Arbitration
 	bit hbusreq;

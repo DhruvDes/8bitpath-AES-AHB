@@ -4,8 +4,8 @@ module mixcolumn_8 (din, en, dout0, dout1, dout2, dout3, clk);
     output [7:0] dout0, dout1, dout2, dout3;
     input clk;
     
-    reg [7:0] reg0, reg1, reg2, reg3;
-    wire [7:0] din02, din03;
+    logic [7:0] reg0, reg1, reg2, reg3;
+    logic [7:0] din02, din03;
     
     assign din02 = {din[6:4], din[3] ^ din[7], din[2] ^ din[7] , din[1], din[0] ^ din[7], din[7]};
     assign din03 = {din[7] ^ din[6], din[6] ^ din[5], din[5] ^ din[4], din[4] ^ din[3] ^ din[7], din[3] ^ din[2] ^ din[7] , din[2] ^ din[1], din[1] ^ din[0] ^ din[7], din[0] ^ din[7]};
@@ -31,9 +31,9 @@ endmodule
 //     output [7:0] dout0, dout1, dout2, dout3;
 //     input  clk;
 
-//     reg  [7:0] reg0, reg1, reg2, reg3;
-//     wire [7:0] mul2, mul4, mul8;
-//     wire [7:0] mul9, mulB, mulD, mulE;
+//     logic  [7:0] reg0, reg1, reg2, reg3;
+//     logic [7:0] mul2, mul4, mul8;
+//     logic [7:0] mul9, mulB, mulD, mulE;
 
 //     // Multiply by 2 in GF(2^8)
 //     assign mul2 = {din[6:4], din[3] ^ din[7], din[2] ^ din[7], din[1], din[0] ^ din[7], din[7]};

@@ -7,8 +7,8 @@ module aes_data_path(d_in, d_out, pld, c3, clk, mc_en, rk_delayed_out, rk_last_o
     input [7:0] mc_en;
     input [7:0] rk_delayed_out, rk_last_out;
     
-    wire [7:0] sr_in, sr_out, s_out, mc_out0, mc_out1, mc_out2, mc_out3, sbox_o;
-    wire [31:0] pdin;
+    logic [7:0] sr_in, sr_out, s_out, mc_out0, mc_out1, mc_out2, mc_out3, sbox_o;
+    logic [31:0] pdin;
 
     assign pdin = {mc_out0, mc_out1, mc_out2, mc_out3};
     assign sr_in = rk_delayed_out ^ s_out;

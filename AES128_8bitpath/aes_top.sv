@@ -1,10 +1,10 @@
-`include "aes_data_path.v"
-`include "byte_permutation_unit.v"
-`include "key_expansion.v"
-`include "mixcolumn.v"
-`include "mux.v"
-`include "parallel_serial_converter.v"
-`include "sbox_case_4.v"
+`include "aes_data_path.sv"
+`include "byte_permutation_unit.sv"
+`include "key_expansion.sv"
+`include "mixcolumn.sv"
+`include "mux.sv"
+`include "parallel_serial_converter.sv"
+`include "sbox_case_4.sv"
 
 
 module aes_8_bit (rst, clk, key_in, d_in, d_out, d_vld, DONE);
@@ -12,24 +12,24 @@ module aes_8_bit (rst, clk, key_in, d_in, d_out, d_vld, DONE);
     input [7:0] key_in;
     input [7:0] d_in;
     output [7:0] d_out;
-    output reg d_vld;
+    output logic d_vld;
   	output logic DONE;
 
     //key scheduler controller
-    wire [3:0] round_cnt_w;
-    reg input_sel, sbox_sel, last_out_sel, bit_out_sel;
-    reg [7:0] rcon_en;
-    reg [3:0] cnt;
-    reg [7:0] round_cnt;
-    reg [2:0] state;
-    wire [7:0] rk_delayed_out, rk_last_out;
-    reg [1:0] c3;
-    wire pld;
-    reg [7:0] mc_en_reg;
-    reg pld_reg;
-    wire [7:0] mc_en;
-    reg [7:0] d_out;
-    wire [7:0] d_out_w;
+    logic [3:0] round_cnt_w;
+    logic input_sel, sbox_sel, last_out_sel, bit_out_sel;
+    logic [7:0] rcon_en;
+    logic [3:0] cnt;
+    logic [7:0] round_cnt;
+    logic [2:0] state;
+    logic [7:0] rk_delayed_out, rk_last_out;
+    logic [1:0] c3;
+    logic pld;
+    logic [7:0] mc_en_reg;
+    logic pld_reg;
+    logic [7:0] mc_en;
+    logic [7:0] d_out;
+    logic [7:0] d_out_w;
   	logic [3:0] Internal_count;
 
     always @ (posedge clk)
@@ -56,8 +56,7 @@ module aes_8_bit (rst, clk, key_in, d_in, d_out, d_vld, DONE);
     begin
       if (rst == 1'b1) 
         begin
-          Internal_count <= 'h0;
-          DONE <= 0;
+
           state <= load;
           cnt <= 4'h0;
          
@@ -272,6 +271,8 @@ module aes_8_bit (rst, clk, key_in, d_in, d_out, d_vld, DONE);
         if (rst == 1'b1)
         begin
             d_vld <= 1'b0;
+            Internal_count <= 'h0;
+            DONE <= 0;
         end
         else
         begin

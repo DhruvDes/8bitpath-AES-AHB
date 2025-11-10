@@ -5,9 +5,9 @@ module ps_conv(din, dout, pdin, pld, clk);
     input pld; // 1 means parallel load, 0 means serial unload
     input clk;
 
-    reg [7:0] reg3, reg2, reg1, reg0;
+    logic [7:0] reg3, reg2, reg1, reg0;
 
-    wire [7:0] mux1_o, mux2_o, mux3_o;
+    logic [7:0] mux1_o, mux2_o, mux3_o;
 
     mux2_1 mux0 (pdin[31:24], reg0, dout, pld);
     mux2_1 mux1 (pdin[23:16], reg1, mux1_o, pld);

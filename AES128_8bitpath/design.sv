@@ -1,5 +1,5 @@
 `include "lsfr_misr.sv"
-`include "aes_top.v"
+`include "aes_top.sv"
 
 
 // module aes_8_bit (rst, clk, key_in, d_in, d_out, d_vld, DONE);
@@ -17,13 +17,6 @@
 //     input  logic [WIDTH-1:0] data_in,   // DUT outputs (8-bit)
 //     output logic [WIDTH-1:0] sig        // running signature
 
-
-
-
-
-
-
-
 module aes_top_bist(
   input   is_bist, 
               rst, 
@@ -31,14 +24,14 @@ module aes_top_bist(
   	 en_lsfr_misr,
   input [7:0]key_in,
    input [7:0]d_in,
-  	
+  
   output [7:0] d_out,
   output d_vld, DONE
   
 
 );
   
-  logic [7:0] q, key_input_bist, data_input_bist;
+  logic [7:0] key_input_bist, data_input_bist;
   logic [7:0] mux_to_key, mux_to_data, misr_to_data_out, device_to_data_out;
   
   
@@ -98,3 +91,10 @@ module aes_top_bist(
   
 
 endmodule
+
+
+interface aes_bist_if;
+ logic rst, clk, d_vld, DONE, is_bist, en_lsfr_misr;
+  logic[7:0] key_in, d_in, d_out; 
+endinterface
+

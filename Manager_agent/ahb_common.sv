@@ -14,3 +14,5 @@ typedef enum bit [2:0] {
 
 enum  {active, passive} active_passive_agent = active;
 
+
+typedef enum bit [1:0] {IDLE, BUSY, NONSEQ, SEQ} trans_t;
