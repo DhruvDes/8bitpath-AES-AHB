@@ -15,8 +15,8 @@ function new(string name = "aes_tran");
 endfunction
 rand logic rst;
 // logic clk
-rand logic [127:0] Plaintext;
-rand logic [127:0] Key;
+randc logic [127:0] Plaintext;
+randc logic [127:0] Key;
 logic [7:0]key_in; 
 logic [7:0]d_in;
   logic [127:0] Ciphertext;
@@ -33,8 +33,8 @@ rand logic en_lsfr_misr;
   `uvm_field_int(Ciphertext, UVM_DEFAULT)
 `uvm_field_int(is_bist, UVM_DEFAULT)
 `uvm_field_int(en_lsfr_misr, UVM_DEFAULT)
-  `uvm_field_int(key_in, UVM_DEFAULT)
-  `uvm_field_int(d_in, UVM_DEFAULT)
+//   `uvm_field_int(key_in, UVM_DEFAULT)
+//   `uvm_field_int(d_in, UVM_DEFAULT)
 `uvm_object_utils_end;
 
   constraint bist_en_same {is_bist == en_lsfr_misr;};
@@ -126,6 +126,70 @@ endtask
 endclass
 
 
+class bist_check extends uvm_sequence_base;
+  `uvm_object_utils(bist_check)
+
+function  new(string name = "bist_check");
+    super.new(name);
+endfunction
+    
+aes_tran req;
+task  body();
+  req = aes_tran :: type_id :: create("req");
+  `uvm_do_with(req,{
+                    req.rst == 0;
+                      is_bist == 1;
+    });
+
+endtask
+
+endclass
+
+
+class rndom_testing extends uvm_sequence_base;
+  `uvm_object_utils(rndom_testing)
+
+  function new(string name = "rndom_testing");
+    super.new(name);
+  endfunction
+    
+  aes_tran req;
+
+task body();
+  req = aes_tran::type_id::create("req");
+//   `uvm_do_with(req, {
+//     req.rst == 0;
+//     req.is_bist dist {0 := 99};
+
+//     // Weighted randomization for variety
+//     req.Key dist { 
+//       128'h0                                       := 1,
+//       128'hFFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF := 1,
+//       128'hAA55_AA55_AA55_AA55_AA55_AA55_AA55_AA55 := 1,
+//       [128'h0000_0000_0000_0000_0000_0000_0000_0000 :
+//        128'hFFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF] := 20
+//     };
+
+//     req.Plaintext dist { 
+//       128'h0                                       := 1,
+//       128'hFFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF := 1,
+//       128'hAA55_AA55_AA55_AA55_AA55_AA55_AA55_AA55 := 1,
+//       [128'h0000_0000_0000_0000_0000_0000_0000_0000 :
+//        128'hFFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF] := 20
+//     };
+//   })
+  `uvm_do_with(req, {rst== 0;})
+endtask
+endclass
+
+
+
+
+
+
+
+
+
 
 class aes_drv extends uvm_driver#(aes_tran);
 `uvm_component_utils(aes_drv)
@@ -153,7 +217,7 @@ task run_phase(uvm_phase phase);
 forever begin 
   seq_item_port.get_next_item(req);
     drive_dut();
-    req.print();
+//     req.print();
     seq_item_port.item_done();
 
 end
@@ -182,8 +246,6 @@ task drive_dut();
   else begin
   
   aes_if.rst <= req.rst;
-  aes_if.is_bist <= req.is_bist;
-  aes_if.en_lsfr_misr <= req.en_lsfr_misr;
   aes_if.key_in <= req.Key[127:120];
   aes_if.d_in   <= req.Plaintext[127:120];
 
@@ -299,7 +361,9 @@ class aes_monitor extends uvm_monitor;
 
     forever begin
       @(posedge aes_if.clk);
-   		
+      tr.rst = aes_if.rst;
+      tr.is_bist = aes_if.is_bist;
+      tr.en_lsfr_misr = aes_if.en_lsfr_misr;
       // --- INPUT CAPTURE PHASE ---
       // Collect 16 bytes of key and plaintext as they are driven in
       if (!aes_if.rst && !aes_if.is_bist && !aes_if.d_vld && !aes_if.DONE && byte_count_in != 16) begin
@@ -331,7 +395,7 @@ class aes_monitor extends uvm_monitor;
           ap.write(tr);
           `uvm_info("AES_MON",
                     $sformatf("Captured full Ciphertext = %h", Ciphertext),
-                    UVM_LOW)
+                    UVM_MEDIUM)
           byte_count_out = 0;
           Ciphertext     = '0;
           byte_count_in = 0;
@@ -351,16 +415,62 @@ class aes_scoreboard extends uvm_scoreboard;
   // Analysis port from the monitor
   uvm_analysis_imp#(aes_tran, aes_scoreboard) analysis_export;
 
+
+  
   // Store latest input vectors
-  logic [127:0] last_key;
-  logic [127:0] last_plaintext;
+  logic [127:0] key, last_key;
+  logic [127:0] last_plaintext, Plaintext;
 
   // Temporary storage for expected and actual outputs
   logic [127:0] expected_output;
   logic [127:0] actual_output;
+  int kt, pt;
+  static int num_trans;
+  
+  
+  
+// covergroup aes_cg;
+//   key_cp : coverpoint kt
+//   {
+//     bins all_zero      = {0};
+//     bins all_one       = {1};
+//     bins alt_bits      = {2};
+//     bins single_bit    = {3};
+//     bins low_weight    = {4};
+//     bins high_weight   = {5};
+//     bins random_other  = {6};
+//   }
 
+//   pt_cp : coverpoint pt 
+//   {
+//     bins all_zero      = {0};
+//     bins all_one       = {1};
+//     bins alt_bits      = {2};
+//     bins single_bit    = {3};
+//     bins low_weight    = {4};
+//     bins high_weight   = {5};
+//     bins random_other  = {6};
+//   }
+  
+
+
+// //   ct_cross : cross key_cp, pt_cp;
+// endgroup
+  
+covergroup aes_cg;
+  key_cp : coverpoint kt {
+    // create an automatic bin for each unique value seen, up to a limit
+    option.auto_bin_max = 64; // change as needed (limits #bins)
+  }
+  pt_cp : coverpoint pt {
+    option.auto_bin_max = 64;
+  }
+    cross key_cp, pt_cp;
+endgroup
+  
   function new(string name = "aes_scoreboard", uvm_component parent = null);
     super.new(name, parent);
+    aes_cg = new();
   endfunction
 
   function void build_phase(uvm_phase phase);
@@ -370,8 +480,8 @@ class aes_scoreboard extends uvm_scoreboard;
 
   // Called automatically whenever monitor writes a transaction
   function void write(aes_tran tr);
-    tr.print();
-
+//     tr.print();
+	num_trans++;
     // Case 1: Input transaction
     if (tr.Ciphertext === '0) begin
       last_key       = tr.Key;
@@ -379,10 +489,19 @@ class aes_scoreboard extends uvm_scoreboard;
       `uvm_info("SCOREBOARD", 
                 $sformatf("Received INPUT: Key=%h Plaintext=%h",
                           last_key, last_plaintext),
-                UVM_LOW)
-    end
-    // Case 2: Output transaction
-    else begin
+                UVM_MEDIUM)
+    end else if (tr.is_bist == 1) begin 
+//       `uvm_info(get_type_name(), $sformatf("Entered BIST branch correctely"), UVM_LOW);
+      if (tr.Ciphertext[7:0] == 8'hc0) begin 
+        `uvm_info(get_type_name(), $sformatf("BIST passed"), UVM_MEDIUM)
+      		aes_cg.sample();
+      end else begin 
+      
+        `uvm_error(get_type_name(), $sformatf("BIST failed"))
+      end 
+      
+      
+    end else begin
       actual_output   = tr.Ciphertext;
       expected_output = aes_reference_model(tr.Key, tr.Plaintext);
 
@@ -391,7 +510,10 @@ class aes_scoreboard extends uvm_scoreboard;
                    $sformatf("Ciphertext mismatch!\n  Expected: %h\n  Got: %h",
                              expected_output, actual_output))
       else
-        `uvm_info("SCOREBOARD", "AES encryption MATCH", UVM_LOW)
+        `uvm_info("SCOREBOARD", "AES encryption MATCH", UVM_MEDIUM)
+        kt = tr.Key;
+        pt = tr.Plaintext;
+        aes_cg.sample();
     end
   endfunction
 
@@ -402,6 +524,18 @@ class aes_scoreboard extends uvm_scoreboard;
     aes_encrypt_dpi(plaintext, key, ciphertext);
     return ciphertext;
   endfunction
+      
+      
+//   function int classify_pattern(logic [127:0] val);
+//     int weight = $countones(val);
+//     if (val == 128'h0)                          return 0; // all zero
+//     else if (val == 128'hFFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF) return 1; // all one
+//     else if (val == 128'hAA55_AA55_AA55_AA55_AA55_AA55_AA55_AA55) return 2; // alternating
+//     else if (weight == 1)                       return 3; // single bit
+//     else if (weight inside {[2:8]})             return 4; // low weight
+//     else if (weight inside {[120:127]})         return 5; // high weight
+//     else                                        return 6; // random
+//   endfunction
 endclass
 
 
@@ -442,6 +576,8 @@ class aes_test extends uvm_test;
   quick_visual_test seq;
   reset_test rst_test;
   random_test_no_bist rd_t_n_b;
+  bist_check bst_chk;
+  rndom_testing rnd_tst;
   
   function new(string name = "aes_test", uvm_component parent = null);
     super.new(name, parent);
@@ -453,6 +589,8 @@ class aes_test extends uvm_test;
     seq = quick_visual_test::type_id::create("seq");
     rst_test = reset_test::type_id::create("rst_test");
     rd_t_n_b = random_test_no_bist :: type_id :: create("random_test_no_bist"); 
+    bst_chk = bist_check  :: type_id :: create("bst_chk"); 
+    rnd_tst = rndom_testing :: type_id :: create("rnd_tst");
   endfunction
 
   task run_phase(uvm_phase phase);
@@ -460,18 +598,32 @@ class aes_test extends uvm_test;
     phase.raise_objection(this);
 	
     repeat(2)rst_test.start(env.sqr);
-    
+      
+    repeat(10)rnd_tst.start(env.sqr);
     seq.start(env.sqr);
     seq.start(env.sqr);
     rd_t_n_b.start(env.sqr);
     seq.start(env.sqr);
+    bst_chk.start(env.sqr);
+    rd_t_n_b.start(env.sqr);
+      
     
-
-    #100; // let it run for a bit
+    while (env.scb.aes_cg.get_coverage() < 80) begin 
+//       	`uvm_info(get_type_name(), $sformatf("Coverage : %f", env.scb.aes_cg.get_coverage()), UVM_NONE);
+        rnd_tst.start(env.sqr);
+    
+    end
+    
+    #200; // let it run for a bit
     phase.drop_objection(this);
   endtask
+  
+  function void extract_phase(uvm_phase phase);
+    super.extract_phase(phase);
+    `uvm_info(get_type_name(), $sformatf("Coverage : %f", env.scb.aes_cg.get_coverage()), UVM_NONE);
+    `uvm_info(get_type_name(), $sformatf("Number of transaction : %f", env.scb.num_trans), UVM_NONE);
+  endfunction
 endclass
-
 
 
 
@@ -505,7 +657,7 @@ module tb;
 
     // Pass interface to UVM components
     uvm_config_db#(virtual aes_bist_if)::set(null, "*.interface", "aes_if", aes_if);
-
+    uvm_top.set_report_verbosity_level(UVM_LOW);
     // Start the UVM test
     run_test("aes_test");
   end
