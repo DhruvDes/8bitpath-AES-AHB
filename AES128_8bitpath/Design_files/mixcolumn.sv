@@ -1,8 +1,8 @@
-module mixcolumn_8 (din, en, dout0, dout1, dout2, dout3, clk);
+module mixcolumn_8 (din, en, dout0, dout1, dout2, dout3, clk, rst);
     input [7:0] din;
     input [7:0] en;
     output [7:0] dout0, dout1, dout2, dout3;
-    input clk;
+    input clk, rst;
     
     logic [7:0] reg0, reg1, reg2, reg3;
     logic [7:0] din02, din03;
@@ -11,7 +11,13 @@ module mixcolumn_8 (din, en, dout0, dout1, dout2, dout3, clk);
     assign din03 = {din[7] ^ din[6], din[6] ^ din[5], din[5] ^ din[4], din[4] ^ din[3] ^ din[7], din[3] ^ din[2] ^ din[7] , din[2] ^ din[1], din[1] ^ din[0] ^ din[7], din[0] ^ din[7]};
 
     always @ (posedge clk)
-    begin
+    if(rst) begin 
+        reg0 <= '0;
+        reg1 <= '0;
+        reg2 <= '0;
+        reg3 <= '0;
+    end
+    else begin
         reg0 <= din ^ (reg1 & en);
         reg1 <= din ^ (reg2 & en);
         reg2 <= din03 ^ (reg3 & en);

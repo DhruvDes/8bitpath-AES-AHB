@@ -1,5 +1,5 @@
-`include "lsfr_misr.sv"
-`include "aes_top.sv"
+// `include "lsfr_misr.sv"
+// `include "aes_top.sv"
 
 
 // module aes_8_bit (rst, clk, key_in, d_in, d_out, d_vld, DONE);
@@ -22,6 +22,7 @@ module aes_top_bist(
               rst, 
               clk,
   	 en_lsfr_misr,
+  
   input [7:0]key_in,
    input [7:0]d_in,
   
@@ -66,7 +67,8 @@ module aes_top_bist(
                   .key_in(mux_to_key), 
                   .d_in(mux_to_data), 
                   .d_out(device_to_data_out), 
-                  .d_vld(d_vld), 
+                  .d_vld(d_vld),
+                 
                   .DONE(DONE));
   
 

@@ -1,9 +1,9 @@
-module key_expansion(key_in, rk_delayed_out, round_cnt, rk_last_out, clk, input_sel, sbox_sel, last_out_sel, bit_out_sel, rcon_en);
+module key_expansion(key_in, rk_delayed_out, round_cnt, rk_last_out, clk, input_sel, sbox_sel, last_out_sel, bit_out_sel, rcon_en, rst);
     input [7:0] key_in;
     output [7:0] rk_delayed_out;
     output [7:0] rk_last_out;
     input [3:0] round_cnt;
-    input clk;
+    input clk, rst;
     input input_sel, sbox_sel, last_out_sel, bit_out_sel; 
     input [7:0] rcon_en;
 
@@ -41,28 +41,51 @@ module key_expansion(key_in, rk_delayed_out, round_cnt, rk_last_out, clk, input_
     mux2_1 mux_last_out (r0, ( r0 ^ rcon_sbox_o),  rk_last_out, last_out_sel);
     bSbox sbox (sbox_in, sbox_o);
 
+
+
     always @ (posedge clk)
-    begin
+    if (rst) begin 
+        r15 <= '0; 
+        r14 <= '0;
+        r13 <= '0;
+        r12 <= '0;
+        r11 <= '0;
+        r10 <= '0;
+        r9  <= '0;
+        r8  <= '0;
+        r7  <= '0;
+        r6  <= '0;
+        r5  <= '0;
+        r4  <= '0;
+        r3  <= '0;
+        r2  <= '0;
+        r1  <= '0;
+        r0  <= '0;
+    end
+    else begin
         r15 <= mux_in_o;
         r14 <= r15;
         r13 <= r14;
         r12 <= r13;
         r11 <= r12;
         r10 <= r11;
-        r9 <= r10;
-        r8 <= r9;
-        r7 <= r8;
-        r6 <= r7;
-        r5 <= r6;
-        r4 <= r5;
-        r3 <= mux_bit_o;
-        r2 <= r3;
-        r1 <= r2;
-        r0 <= r1;
+        r9  <=  r10;
+        r8  <=  r9;
+        r7  <=  r8;
+        r6  <=  r7;
+        r5  <=  r6;
+        r4  <=  r5;
+        r3  <=  mux_bit_o;
+        r2  <=  r3;
+        r1  <=  r2;
+        r0  <=  r1;
     end
     
     always @ (posedge clk)
     begin
+        if (rst) begin 
+            r_redun <= '0;
+        end
         if (rcon_en == 8'hff)
         begin
             r_redun <= r12;

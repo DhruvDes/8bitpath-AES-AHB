@@ -1,6 +1,10 @@
 //https://github.com/vidursatija/AES128
 #include <iostream>
 #include <unordered_map>
+#include "svdpi.h"
+#include <cstdio>
+#include <iomanip>
+
 
 using namespace std;
 
@@ -363,39 +367,85 @@ string hex2string(unsigned char* hex, int n)
 	return res;
 }
 
-int main() {
+// int main() {
 
-	string plaintext;
-	cin>>plaintext;
+// 	string plaintext;
+// 	cin>>plaintext;
 
-	string keytext;
-	cin>>keytext;
+// 	string keytext;
+// 	cin>>keytext;
 
-	unsigned char *key = string2hex(keytext, 32);
-	unsigned char *expanded_key = ExpandKey(key);
+// 	unsigned char *key = string2hex(keytext, 32);
+// 	unsigned char *expanded_key = ExpandKey(key);
 
-	int n = plaintext.length();
-	string total_enc = "";
-	string total_dec = "";
-    for(int part=0; part<(n+31)/32; part++)
-    {
-        int cutoff = min(n, (part+1)*32);
-        string part_string = plaintext.substr(part*32, cutoff);
-		for(int i=0; cutoff%32 != 0 && i<32-cutoff%32; i++)
-		{
-			part_string += "0";
-		}
-		unsigned char* padded_string = string2hex(part_string, 32);
-		unsigned char* cipher = Encrypt(padded_string, expanded_key);
-		unsigned char* reverse_cipher = Decrypt(cipher, expanded_key);
-		string res = hex2string(cipher, 16);
-		string dec = hex2string(reverse_cipher, 16);
-		total_enc += res;
-		total_dec += dec;
-		// cout<<"Part: "<<part_string<<" AES128: "<<res<<endl;
-		// cout<<"Decr: "<<dec<<endl;
-	}
-	cout<<total_enc<<endl<<total_dec<<endl;
+// 	int n = plaintext.length();
+// 	string total_enc = "";
+// 	string total_dec = "";
+//     for(int part=0; part<(n+31)/32; part++)
+//     {
+//         int cutoff = min(n, (part+1)*32);
+//         string part_string = plaintext.substr(part*32, cutoff);
+// 		for(int i=0; cutoff%32 != 0 && i<32-cutoff%32; i++)
+// 		{
+// 			part_string += "0";
+// 		}
+// 		unsigned char* padded_string = string2hex(part_string, 32);
+// 		unsigned char* cipher = Encrypt(padded_string, expanded_key);
+// 		unsigned char* reverse_cipher = Decrypt(cipher, expanded_key);
+// 		string res = hex2string(cipher, 16);
+// 		string dec = hex2string(reverse_cipher, 16);
+// 		total_enc += res;
+// 		total_dec += dec;
+// 		// cout<<"Part: "<<part_string<<" AES128: "<<res<<endl;
+// 		// cout<<"Decr: "<<dec<<endl;
+// 	}
+// 	cout<<total_enc<<endl<<total_dec<<endl;
 
-	return 0;
-}
+// 	return 0;
+// }
+
+// extern "C" void dpi_aes_process(const char* plaintext_cstr,
+//                                 const char* keytext_cstr,
+//                                 svOpenArrayHandle enc_out,
+//                                 svOpenArrayHandle dec_out)
+// {
+//     std::string plaintext(plaintext_cstr);
+//     std::string keytext(keytext_cstr);
+
+//     unsigned char* key = string2hex(keytext, 32);
+//     unsigned char* expanded_key = ExpandKey(key);
+
+//     int n = plaintext.length();
+//     std::string total_enc;
+//     std::string total_dec;
+
+//     for (int part = 0; part < (n + 31) / 32; part++) {
+//         int cutoff = std::min(n, (part + 1) * 32);
+//         std::string part_string = plaintext.substr(part * 32, cutoff);
+
+//         for (int i = 0; cutoff % 32 != 0 && i < 32 - cutoff % 32; i++)
+//             part_string += "0";
+
+//         unsigned char* padded_string = string2hex(part_string, 32);
+//         unsigned char* cipher = Encrypt(padded_string, expanded_key);
+//         unsigned char* reverse_cipher = Decrypt(cipher, expanded_key);
+
+//         total_enc += hex2string(cipher, 16);
+//         total_dec += hex2string(reverse_cipher, 16);
+//     }
+
+//     // Copy results into SV dynamic arrays
+//     const char* enc_cstr = total_enc.c_str();
+//     const char* dec_cstr = total_dec.c_str();
+
+//     int enc_len = svSize(enc_out, 1);
+//     int dec_len = svSize(dec_out, 1);
+
+//     for (int i = 0; i < enc_len && enc_cstr[i]; i++)
+//         ((char*)svGetArrElemPtr1(enc_out, i))[0] = enc_cstr[i];
+
+//     for (int i = 0; i < dec_len && dec_cstr[i]; i++)
+//         ((char*)svGetArrElemPtr1(dec_out, i))[0] = dec_cstr[i];
+
+//     std::cout << "[DPI] AES done" << std::endl;
+// }

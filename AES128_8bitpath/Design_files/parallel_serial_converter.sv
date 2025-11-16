@@ -1,9 +1,9 @@
-module ps_conv(din, dout, pdin, pld, clk);
+module ps_conv(din, dout, pdin, pld, clk, rst);
     input [7:0] din;
     output [7:0] dout; 
     input [31:0] pdin; // highest byte go out first
     input pld; // 1 means parallel load, 0 means serial unload
-    input clk;
+    input clk, rst;
 
     logic [7:0] reg3, reg2, reg1, reg0;
 
@@ -15,7 +15,13 @@ module ps_conv(din, dout, pdin, pld, clk);
     mux2_1 mux3 (pdin[ 7: 0], reg3, mux3_o, pld);
 
     always @ (posedge clk)
-    begin
+    if(rst)begin 
+        reg3 <= '0;
+        reg2 <= '0;
+        reg1 <= '0;
+        reg0 <= '0;
+    end
+    else begin
         reg3 <= din;
         reg2 <= mux3_o;
         reg1 <= mux2_o;

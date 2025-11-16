@@ -1,8 +1,8 @@
-module byte_permutation (din, dout, c3, clk);
+module byte_permutation (din, dout, c3, clk, rst);
     input [7:0] din;
     output [7:0] dout;
     input [1:0] c3;
-    input clk;
+    input clk, rst;
 
     logic c0, c1, c2;
     logic [7:0] mux0_o, mux1_o, mux2_o;
@@ -18,7 +18,22 @@ module byte_permutation (din, dout, c3, clk);
     mux4_1 mux3 (din, reg9, reg5, reg1, dout, c3);
 
     always @ (posedge clk)
-    begin
+    if(rst)begin 
+        reg12 <= '0;
+        reg11 <= '0;
+        reg10 <= '0;
+        reg9  <= '0;
+        reg8  <= '0;
+        reg7  <= '0;
+        reg6  <= '0;
+        reg5  <= '0;
+        reg4  <= '0;
+        reg3  <= '0;
+        reg2  <= '0;
+        reg1  <= '0;
+
+    end
+    else begin
         reg12 <= mux0_o;
         reg11 <= reg12;
         reg10 <= reg11;

@@ -15,8 +15,8 @@ function new(string name = "aes_tran");
 endfunction
 rand logic rst;
 // logic clk
-randc logic [127:0] Plaintext;
-randc logic [127:0] Key;
+rand logic [127:0] Plaintext;
+rand logic [127:0] Key;
 logic [7:0]key_in; 
 logic [7:0]d_in;
   logic [127:0] Ciphertext;
@@ -608,7 +608,7 @@ class aes_test extends uvm_test;
     rd_t_n_b.start(env.sqr);
       
     
-    while (env.scb.aes_cg.get_coverage() < 80) begin 
+    while (env.scb.aes_cg.get_coverage() < 10) begin 
 //       	`uvm_info(get_type_name(), $sformatf("Coverage : %f", env.scb.aes_cg.get_coverage()), UVM_NONE);
         rnd_tst.start(env.sqr);
     

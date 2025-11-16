@@ -1,10 +1,10 @@
-`include "aes_data_path.sv"
-`include "byte_permutation_unit.sv"
-`include "key_expansion.sv"
-`include "mixcolumn.sv"
-`include "mux.sv"
-`include "parallel_serial_converter.sv"
-`include "sbox_case_4.sv"
+// `include "aes_data_path.sv"
+// `include "byte_permutation_unit.sv"
+// `include "key_expansion.sv"
+// `include "mixcolumn.sv"
+// `include "mux.sv"
+// `include "parallel_serial_converter.sv"
+// `include "sbox_case_4.sv"
 
 
 module aes_8_bit (rst, clk, key_in, d_in, d_out, d_vld, DONE);
@@ -21,7 +21,7 @@ module aes_8_bit (rst, clk, key_in, d_in, d_out, d_vld, DONE);
     logic [7:0] rcon_en;
     logic [3:0] cnt;
     logic [7:0] round_cnt;
-    logic [2:0] state;
+    // logic [2:0] state;
     logic [7:0] rk_delayed_out, rk_last_out;
     logic [1:0] c3;
     logic pld;
@@ -41,16 +41,17 @@ module aes_8_bit (rst, clk, key_in, d_in, d_out, d_vld, DONE);
     assign mc_en = mc_en_reg;
     assign round_cnt_w = round_cnt[7:4];
 
-    key_expansion key (key_in, rk_delayed_out, round_cnt_w, rk_last_out, clk, input_sel, sbox_sel, last_out_sel, bit_out_sel, rcon_en);
-    aes_data_path data_path (d_in, d_out_w, pld, c3, clk, mc_en, rk_delayed_out, rk_last_out);
+    key_expansion key (key_in, rk_delayed_out, round_cnt_w, rk_last_out, clk, input_sel, sbox_sel, last_out_sel, bit_out_sel, rcon_en, rst);
+    aes_data_path data_path (d_in, d_out_w, pld, c3, clk, mc_en, rk_delayed_out, rk_last_out, rst);
 
-    parameter load = 3'h0; //load 16 byte
-    parameter b1st = 3'h1; //first byte need rcon
-    parameter b2nd = 3'h2; //2byte go through sbox
-    parameter b3rd = 3'h3; //last byte go through sbox from redundant register
-    parameter norm = 3'h4; //normal round calculate two columns
-    parameter shif = 3'h5; //shift 4 byte 
-
+    enum logic [2:0] {load, b1st, b2nd, b3rd, norm, shif} state;  
+    // parameter load = 3'h0; //load 16 byte
+    // parameter b1st = 3'h1; //first byte need rcon
+    // parameter b2nd = 3'h2; //2byte go through sbox
+    // parameter b3rd = 3'h3; //last byte go through sbox from redundant register
+    // parameter norm = 3'h4; //normal round calculate two columns
+    // parameter shif = 3'h5; //shift 4 byte 
+    
     //state machine for key schedule
     always @ (posedge clk)
     begin
@@ -288,4 +289,7 @@ module aes_8_bit (rst, clk, key_in, d_in, d_out, d_vld, DONE);
         end
     end
 endmodule
+
+
+
 

@@ -2,7 +2,7 @@
 #include <cstdio>
 #include <iostream>
 #include <iomanip>
-#include "aes_core.cpp"
+// #include "aes_core.cpp"
 
 
 using namespace std;
@@ -39,13 +39,13 @@ extern "C" void aes_encrypt_dpi(
     // ------------------------------------------------------------
     // Print incoming values
     // ------------------------------------------------------------
-    cout << "(C++) plaintext = 0x";
-    for (int i = 0; i < 16; ++i) cout << hex << setw(2) << setfill('0') << (int)pt[i];
-    cout << endl;
+//     cout << "(C++) plaintext = 0x";
+//     for (int i = 0; i < 16; ++i) cout << hex << setw(2) << setfill('0') << (int)pt[i];
+//     cout << endl;
 
-    cout << "(C++) key       = 0x";
-    for (int i = 0; i < 16; ++i) cout << hex << setw(2) << setfill('0') << (int)k[i];
-    cout << endl;
+//     cout << "(C++) key       = 0x";
+//     for (int i = 0; i < 16; ++i) cout << hex << setw(2) << setfill('0') << (int)k[i];
+//     cout << endl;
 
     // ------------------------------------------------------------
     // Perform AES encryption
@@ -69,9 +69,9 @@ extern "C" void aes_encrypt_dpi(
     // ------------------------------------------------------------
     // Print ciphertext for debug
     // ------------------------------------------------------------
-    cout << "(C++) ciphertext = 0x";
-    for (int i = 0; i < 16; ++i) cout << hex << setw(2) << setfill('0') << (int)cipher[i];
-    cout << endl;
+//     cout << "(C++) ciphertext = 0x";
+//     for (int i = 0; i < 16; ++i) cout << hex << setw(2) << setfill('0') << (int)cipher[i];
+//     cout << endl;
 
     delete[] expanded;
     delete[] cipher;
@@ -86,27 +86,27 @@ extern "C" void aes_encrypt_dpi(
 //   // 128 bits / 32 bits per word = 4 words
 //   const int WORDS = 4;
 
-//   // ------------------------------------------------------------
+
 //   // Print plaintext (aval only, ignore X/Z in bval for now)
-//   // ------------------------------------------------------------
+
 //   std::printf("(C) plaintext = 0x");
 //   for (int i = WORDS - 1; i >= 0; --i) {
 //     std::printf("%08x", plaintext[i].aval);
 //   }
 //   std::printf("\n");
 
-//   // ------------------------------------------------------------
+
 //   // Print key
-//   // ------------------------------------------------------------
+
 //   std::printf("(C) key       = 0x");
 //   for (int i = WORDS - 1; i >= 0; --i) {
 //     std::printf("%08x", key[i].aval);
 //   }
 //   std::printf("\n");
 
-//   // ------------------------------------------------------------
-//   // For now, just copy plaintext → ciphertext (identity function)
-//   // ------------------------------------------------------------
+
+//   // just copy plaintext → ciphertext (identity function)
+
 //   for (int i = 0; i < WORDS; ++i) {
 //     ciphertext[i].aval = plaintext[i].aval; // data bits
 //     ciphertext[i].bval = 0;                 // mark all bits as 0/1 (no X/Z)
