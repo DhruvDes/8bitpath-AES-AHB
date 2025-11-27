@@ -1,0 +1,23 @@
+module aes_data_path(d_in, d_out, pld, c3, clk, rst, mc_en, rk_delayed_out, rk_last_out);
+    input [7:0] d_in;
+    output [7:0] d_out;
+    input pld;
+    input [1:0] c3;
+    input clk;
+  input rst;
+    input [7:0] mc_en;
+    input [7:0] rk_delayed_out, rk_last_out;
+    
+    logic [7:0] sr_in, sr_out, s_out, mc_out0, mc_out1, mc_out2, mc_out3, sbox_o;
+    logic [31:0] pdin;
+
+    assign pdin = {mc_out0, mc_out1, mc_out2, mc_out3};
+    assign sr_in = rk_delayed_out ^ s_out;
+    assign d_out = sbox_o ^ rk_last_out;
+
+  byte_permutation SR (sr_in, sr_out, c3, clk, rst);
+  parallel_serial_converter PS (d_in, s_out, pdin, pld, clk, rst);
+  mix_column MC (sbox_o, mc_en, mc_out0, mc_out1, mc_out2, mc_out3, clk, rst);
+    bSbox SB (sr_out, sbox_o);
+endmodule
+
