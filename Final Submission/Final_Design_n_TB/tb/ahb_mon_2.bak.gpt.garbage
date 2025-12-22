@@ -1,0 +1,160 @@
+class reply_pkt extends uvm_object;
+
+`uvm_object_utils(reply_pkt)
+  function new(string name = "reply_pkt");
+    super.new(name);
+  endfunction
+
+  logic [31:0] key_pt[8];
+  logic [31:0] ct [4];
+
+  logic hresp;
+
+  logic hsize;
+
+  logic hburst;
+
+  logic hwaddr;
+
+
+
+endclass
+
+
+
+class ahb_mon extends uvm_monitor;
+  `uvm_component_utils(ahb_mon)
+
+  // Virtual interface to the AHB bus
+  virtual ahb_if vif;
+
+  // Analysis port to send observed transactions to subscribers (scoreboard, coverage, etc.)
+  uvm_analysis_port #(m_a_transaction) ap;
+
+  // Pipeline state for AHB address   data alignment
+  bit        prev_valid;
+  bit [31:0] prev_addr;
+  bit [2:0]  prev_size;
+  burst_t    prev_burst;
+  bit        prev_hwrite;
+
+  // Current transaction being assembled
+  m_a_transaction curr_tr;
+  int beats_expected;
+  int beats_seen;
+
+  function new(string name = "ahb_mon", uvm_component parent = null);
+    super.new(name, parent);
+    ap = new("ap", this);
+  endfunction
+
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    if (!uvm_config_db#(virtual ahb_if)::get(this, "interface", "ahb_vif", vif)) begin
+      `uvm_error(get_type_name(), "Failed to get ahb_vif for monitor")
+    end
+  endfunction
+
+  // Decode number of beats from AHB burst type
+  function int beats_from_burst(burst_t b);
+    case (b)
+      SINGLE:                beats_from_burst = 1;
+      INCR4,  WRAP4:         beats_from_burst = 4;
+      INCR8,  WRAP8:         beats_from_burst = 8;
+      INCR16, WRAP16:        beats_from_burst = 16;
+      default:               beats_from_burst = 1; // plain INCR etc.
+    endcase
+  endfunction
+
+  task run_phase(uvm_phase phase);
+    super.run_phase(phase);
+    
+    prev_valid     = 0;
+    curr_tr        = null;
+    beats_expected = 0;
+    beats_seen     = 0;
+
+    forever begin
+      @(posedge vif.hclk);
+
+      // Handle reset
+      if (!vif.hrstn) begin
+        prev_valid     = 0;
+        curr_tr        = null;
+        beats_expected = 0;
+        beats_seen     = 0;
+        continue;
+      end
+
+      // --------------------------------------------
+      // 1) DATA PHASE: use previous address phase info
+      // --------------------------------------------
+      if (prev_valid && vif.hreadyOut) begin
+        // First beat: allocate and initialize the transaction
+        if (curr_tr == null) begin
+          curr_tr = m_a_transaction::type_id::create("tr", this);
+          curr_tr.addr   = prev_addr;
+          curr_tr.size   = prev_size;
+          curr_tr.burst  = prev_burst;
+          curr_tr.wr_rd  = prev_hwrite;
+          curr_tr.dataQ.delete();
+
+          beats_expected = beats_from_burst(prev_burst);
+          beats_seen     = 0;
+        end
+
+        // Capture data for this beat
+        if (prev_hwrite) begin
+          // WRITE beat     sample hwdata
+          curr_tr.dataQ.push_back(vif.hwdata);
+        end
+        else begin
+          // READ beat     sample hrdata + resp
+          curr_tr.dataQ.push_back(vif.hrdata);
+          curr_tr.rdata = vif.hrdata;
+          curr_tr.resp  = vif.hresp;
+        end
+
+        beats_seen++;
+
+        // End of burst?
+        if (beats_seen >= beats_expected ||
+            (vif.htrans == IDLE) || (vif.htrans == BUSY)) begin
+          `uvm_info("AHB_MON",
+                    $sformatf("Observed %0s burst: addr=0x%08h beats=%0d",
+                              (curr_tr.wr_rd ? "WRITE" : "READ"),
+                              curr_tr.addr, beats_seen),
+                    UVM_HIGH)
+                    curr_tr.print();
+          ap.write(curr_tr);
+          
+          curr_tr        = null;
+          beats_expected = 0;
+          beats_seen     = 0;
+        end
+      end
+
+      // --------------------------------------------
+      // 2) ADDRESS PHASE: latch for next cycle's data
+      // --------------------------------------------
+      if (vif.hreadyOut &&
+          vif.hsel &&
+          (vif.htrans == NONSEQ || vif.htrans == SEQ)) begin
+
+        prev_valid   = 1;
+        prev_addr    = vif.haddr;
+        prev_size    = vif.hsize;
+        prev_burst   = burst_t'(vif.hburst);
+        prev_hwrite  = vif.hwrite;
+      end
+      else begin
+        // no valid address phase this cycle
+        prev_valid = 0;
+      end
+
+    end // forever
+  endtask
+
+endclass : ahb_mon
+
+

@@ -1,0 +1,455 @@
+package ahb_reg;
+  typedef enum logic [5:0] {
+      // Control / status region
+      REG_CTRL0  = 6'h00,   // 0x00 - sets aes start
+      REG_CTRL1  = 6'h01,   // 0x04 - sets bist on/off
+      REG_STAT0  = 6'h02,   // 0x08
+      REG_STAT1  = 6'h03,   // 0x0C
+
+      // Key registers 
+      REG_KEY0   = 6'h04,   // 0x10
+      REG_KEY1   = 6'h05,   // 0x14
+      REG_KEY2   = 6'h06,   // 0x18
+      REG_KEY3   = 6'h07,   // 0x1C
+
+      // Plaintext / data registers 
+      REG_PT0    = 6'h08,   // 0x20
+      REG_PT1    = 6'h09,   // 0x24
+      REG_PT2    = 6'h0A,   // 0x28
+      REG_PT3    = 6'h0B,   // 0x2C
+
+      // Ciphertext / result registers  
+      REG_CT0    = 6'h0C,   // 0x30
+      REG_CT1    = 6'h0D,   // 0x34
+      REG_CT2    = 6'h0E,   // 0x38
+      REG_CT3    = 6'h0F    // 0x3C
+  } ahb_reg_addr_e;
+
+  typedef enum logic [2:0] {
+        S_IDLE,
+        S_RESET_CORE,
+        S_LOAD_IN,
+        S_WAIT_OUT,
+        S_COLLECT_OUT
+  } aes_state_e;
+
+endpackage
+
+
+module ahb_top (
+    input  logic        HCLK,
+    input  logic        HRESETn,
+
+    input  logic        HSEL,
+    input  logic [31:0] HADDR,
+    input  logic [1:0]  HTRANS,
+    input  logic        HWRITE,
+    input  logic [2:0]  HSIZE,
+ 	input logic [2:0]   HBURST,
+    input  logic [31:0] HWDATA,
+    input  logic        HREADY,
+
+    output logic [31:0] HRDATA,
+    output logic        HREADYOUT,
+    output logic        HRESP,
+
+    // AES side
+    output logic        aes_rst,
+    output logic [7:0]  aes_key_in,
+    output logic [7:0]  aes_din,
+
+    input  logic [7:0]  aes_dout,
+    input  logic        aes_valid,
+    input  logic        aes_done_in,
+    output logic        is_bist
+);
+
+    import ahb_reg::*;
+    aes_state_e state, state_n;
+
+    // ------------------------------------------------------------
+    // SECTION A – AHB interface and register file
+    // ------------------------------------------------------------
+    // Address decode (we only look at word-aligned addresses)
+    logic [5:0] addr_word;
+    assign addr_word = HADDR[7:2];
+
+    // Key, plaintext, ciphertext registers
+    logic [127:0] key_reg;
+    logic [127:0] pt_reg;
+    logic [127:0] ct_reg;
+
+    logic         start_req;
+    logic         key_written;
+    logic         pt_written;
+    logic        aes_done_pulse;
+    logic bus_stall;
+    // One-cycle delayed address + control (data phase information)
+    logic [5:0]   addr_d;
+    logic [2:0]   hsize_d;      // delayed HSIZE (for data phase)
+    logic [2:0]   hburst_d;     // delayed HBURST (for data phase)
+    logic         write_d;
+    logic         read_d;
+    logic         size_ok_d;    // HSIZE valid? (32-bit only)
+    logic         burst_ok_d;   // HBURST valid? (SINGLE/INCR only)
+    logic         addr_ok_d;
+
+    logic aes_start_req;
+        // Pipeline the address/control (address phase → data phase)
+    always_ff @(posedge HCLK) begin
+        if (!HRESETn) begin
+        addr_d     <= '0;
+        hsize_d    <= 3'b010;   // default word size
+        hburst_d   <= 3'b000;   // default SINGLE
+        write_d    <= 1'b0;
+        read_d     <= 1'b0;
+        size_ok_d  <= 1'b1;
+        burst_ok_d <= 1'b1;
+        addr_ok_d  <= 1'b1;
+    end else if (HREADY && HSEL && HTRANS[1]) begin
+        // *** Only capture real address phases (NONSEQ/SEQ) ***
+        addr_d   <= HADDR[7:2];
+        hsize_d  <= HSIZE;
+        hburst_d <= HBURST;
+
+        // This cycle is classified as write or read
+        write_d   <=  HWRITE;
+        read_d    <= ~HWRITE;
+
+        size_ok_d  <= (HSIZE == 3'b010);
+        burst_ok_d <= (HBURST == 3'b000) ||  // SINGLE
+                      (HBURST == 3'b001) ||  // INCR
+                      (HBURST == 3'b011) ||
+                      (HBURST == 3'b101);
+
+        addr_ok_d <= (HADDR[7:2] >= REG_CTRL0) &&
+                         (HADDR[7:2] <= REG_CT3);
+    end
+    end
+
+
+    // Write handling: previous cycle was a write → this cycle is its data phase
+    // AHB pipelined case: (addr[i]) → (addr[i+1] + data[i])
+    // Non-pipelined also works: (addr[i]) → (idle + data[i])
+    logic aes_start;  // declared here so we can use it below
+      // Snapshot registers used by AES core
+    logic [127:0] key_buf;
+    logic [127:0] pt_buf;
+    logic phase_done;
+    logic read_ct3_d;
+
+
+    always_ff @(posedge HCLK or negedge HRESETn) begin
+    if (!HRESETn) begin
+        key_reg       <= '0;
+        pt_reg        <= '0;
+        start_req     <= 1'b0;   // can later delete if unused
+        key_written   <= 1'b0;
+        pt_written    <= 1'b0;
+        is_bist       <= 1'b0;
+        aes_start_req <= 1'b0;   // <-- reset here
+    end else begin
+        if (phase_done) begin
+            // end of an AHB "phase" (after CT3 read)
+            start_req     <= 1'b0;
+            key_written   <= 1'b0;
+            pt_written    <= 1'b0;
+            is_bist       <= 1'b0;
+            aes_start_req <= 1'b0;  // <-- also clear here
+        end else begin
+            // Clear bookkeeping when AES actually starts a new operation
+            if (aes_start && state == S_IDLE) begin
+                aes_start_req <= 1'b0;  // <-- moved here
+                start_req     <= 1'b0;
+                key_written   <= 1'b0;
+                pt_written    <= 1'b0;
+            end
+
+            // Handle AHB writes
+            if (write_d && HREADY && addr_ok_d) begin
+                unique case (ahb_reg_addr_e'(addr_d))
+
+                    REG_CTRL0: begin
+                        // Bit 0 is "start AES" request
+                        if (HWDATA[0]) begin
+                            aes_start_req <= 1'b1;  // <-- single place where it's set
+                        end
+                    end
+
+                    REG_CTRL1: begin
+                        is_bist <= HWDATA[0];
+                    end
+
+                    // 128-bit key (4 x 32-bit)
+                    REG_KEY0: key_reg[ 31:  0] <= HWDATA;
+                    REG_KEY1: key_reg[ 63: 32] <= HWDATA;
+                    REG_KEY2: key_reg[ 95: 64] <= HWDATA;
+                    REG_KEY3: begin
+                        key_reg[127: 96] <= HWDATA;
+                        key_written      <= 1'b1;
+                    end
+
+                    // 128-bit plaintext (4 x 32-bit)
+                    REG_PT0:  pt_reg[ 31:  0] <= HWDATA;
+                    REG_PT1:  pt_reg[ 63: 32] <= HWDATA;
+                    REG_PT2:  pt_reg[ 95: 64] <= HWDATA;
+                    REG_PT3:  begin
+                        pt_reg[127: 96] <= HWDATA;
+                        pt_written      <= 1'b1;
+                    end
+
+                    default: ;
+                endcase
+            end
+        end
+    end
+end
+      // Snapshot key/plaintext when AES starts, so AES sees a frozen block
+    always_ff @(posedge HCLK or negedge HRESETn) begin
+        if (!HRESETn) begin
+            key_buf <= '0;
+            pt_buf  <= '0;
+        end else if (aes_start) begin
+            key_buf <= key_reg;
+            pt_buf  <= pt_reg;
+        end
+    end
+
+    always_ff @(posedge HCLK or negedge HRESETn) begin
+    if (!HRESETn) begin
+        bus_stall <= 1'b0;
+        HREADYOUT <= 1'b1;   // idle slave is ready
+    end else begin
+        if (aes_start) begin
+            bus_stall <= 1'b1;
+        end else if (aes_done_pulse) begin
+            bus_stall <= 1'b0;
+        end
+        if (bus_stall)
+            HREADYOUT <= 1'b0;
+        else
+            HREADYOUT <= 1'b1;
+    end
+end
+
+    // ------------------------------------------------------------
+    // SECTION B – AES FSM: stream 16 bytes in, 16 bytes out
+    // ----------------------------------------------------------
+    
+    logic [3:0]  in_idx;   // which input byte we’re sending (0..15)
+    logic [3:0]  out_idx;  // which output byte we’re collecting (0..15)
+
+    logic        aes_busy;
+    
+    logic        aes_done_sticky;
+
+    logic [127:0] ct_block_wire;
+
+	assign read_ct3_d = read_d &&
+                  (ahb_reg_addr_e'(addr_d) == REG_CT3);
+    assign phase_done = aes_done_sticky && read_ct3_d;
+
+    // Start condition: AHB side requested start and both key & PT are ready
+    // assign aes_start =
+    //    (!is_bist && start_req && key_written && pt_written && !aes_busy)
+    // || ( is_bist && !aes_busy && !aes_done_sticky );
+  
+    
+
+    assign aes_start =
+       (!is_bist && aes_start_req && key_written && pt_written && (state == S_IDLE))
+    || ( is_bist && (state == S_IDLE) && !aes_done_sticky);
+  
+
+    // Combinational FSM
+    always_comb begin
+        // Defaults
+        state_n         = state;
+        aes_rst         = 1'b0;
+        aes_busy        = 1'b0;
+        aes_done_pulse  = 1'b0;
+
+        // Drive AES inputs based on in_idx (MSB-first: byte 15 → byte 0)
+        aes_key_in      = key_buf[8*(4'd15 - in_idx) +: 8];
+        aes_din         = pt_buf [8*(4'd15 - in_idx) +: 8];
+
+        unique case (state)
+            S_IDLE: begin
+                aes_busy = 1'b0;
+              	aes_rst  = 1'b1; 
+                if (aes_start) begin
+                    state_n = S_RESET_CORE;
+                end
+            end
+
+            S_RESET_CORE: begin
+                aes_busy = 1'b1;
+                aes_rst  = 1'b1; // one cycle reset to core
+                state_n  = S_LOAD_IN;
+            end
+
+            S_LOAD_IN: begin
+                aes_busy = 1'b1;
+                // Will stream 16 bytes via in_idx 0..15 (sequential block bumps it)
+                if (in_idx == 4'd15) begin
+                    state_n = S_WAIT_OUT;
+                end
+            end
+
+            S_WAIT_OUT: begin
+                aes_busy = 1'b1;
+                if (aes_valid) begin
+                    state_n = S_COLLECT_OUT;
+                end
+            end
+
+            S_COLLECT_OUT: begin
+                aes_busy = 1'b1;
+                if (aes_done_in) begin
+                    aes_done_pulse = 1'b1; // last byte captured this cycle
+                    state_n        = S_IDLE;
+                  	aes_rst  = 1'b1; 
+                end
+            end
+
+            default: begin
+                state_n = S_IDLE;
+            end
+        endcase
+    end
+
+    // Sequential: state, indices, ciphertext collection
+    always_ff @(posedge HCLK or negedge HRESETn) begin
+        if (!HRESETn) begin
+            state         <= S_IDLE;
+            in_idx        <= 4'd0;
+            out_idx       <= 4'd0;
+            ct_block_wire <= '0;
+        end else begin
+		    if (phase_done) begin
+                state         <= S_IDLE;
+                in_idx        <= 4'd0;
+                out_idx       <= 4'd0;
+                ct_block_wire <= '0;
+            end else begin
+            state <= state_n;
+            case (state)
+                S_IDLE: begin
+                    in_idx        <= 4'd0;
+                    out_idx       <= 4'd0;
+                end
+
+                S_RESET_CORE: begin
+                    in_idx        <= 4'd0;
+                    out_idx       <= 4'd0;
+                    ct_block_wire <= '0;
+                end
+
+                S_LOAD_IN: begin
+                    if (in_idx != 4'd15) begin
+                        in_idx <= in_idx + 4'd1;
+                    end
+                end
+
+                S_WAIT_OUT: begin
+    // Capture the very first valid byte using the *same* reversed indexing
+                    if (aes_valid) begin
+                        ct_block_wire[8*(4'd15 - out_idx) +: 8] <= aes_dout;
+                        if (out_idx != 4'd15) begin
+                            out_idx <= 4'd1;
+                        end
+                    end else begin
+                        out_idx <= 4'd0;
+                    end
+                end
+
+                S_COLLECT_OUT: begin
+                    if (aes_valid && out_idx <= 4'd15) begin
+                        ct_block_wire[8*(4'd15 - out_idx) +: 8] <= aes_dout;
+                        if (out_idx != 4'd15) begin
+                            out_idx <= out_idx + 4'd1;
+                        end
+                    end
+                end
+
+                default: ;
+            endcase
+        end
+    end
+    end
+
+
+
+
+    // ------------------------------------------------------------
+    // SECTION C – Ciphertext register + status + AHB read path
+    // ------------------------------------------------------------
+     //assign HREADYOUT = 1'b1; // no wait states from this slave
+
+    // Active data-phase transfer?
+    wire have_active_transfer_d = write_d || read_d;
+
+    // ERROR if previous transfer had unsupported HSIZE or HBURST
+    // AHB-Lite: HRESP = 0 -> OKAY, 1 -> ERROR
+    assign HRESP = (have_active_transfer_d &&
+                   (!size_ok_d || !burst_ok_d || !addr_ok_d) )
+                   ? 1'b1   // ERROR
+                   : 1'b0;  // OKAY
+
+
+    // Latch finished ciphertext + sticky DONE bit
+    always_ff @(posedge HCLK or negedge HRESETn) begin
+        if (!HRESETn) begin
+            ct_reg          <= '0;
+            aes_done_sticky <= 1'b0;
+        end else begin
+        if (phase_done) begin
+            aes_done_sticky <= 1'b0;
+            //ct_reg <= '0;
+        end else begin
+            if (aes_done_pulse) begin
+                ct_reg <= ct_block_wire;
+
+                if (state == S_COLLECT_OUT && aes_valid && (out_idx == 4'd15)) begin
+                    // Patch the final byte in the same reversed position (index 0)
+                    ct_reg[8*(4'd15 - out_idx) +: 8] <= aes_dout;
+                end
+
+                aes_done_sticky <= 1'b1;
+            end
+
+            if (aes_start) begin
+                aes_done_sticky <= 1'b0;
+            end
+        end
+    end
+    end
+
+  
+  //assign ct_reg = 128'h1111_1111_2222_2222_3333_3333_4444_4444;
+
+    // AHB read data (data phase: previous cycle was a READ → read_d=1)
+    logic [31:0] hrdata_q;
+
+always_ff @(posedge HCLK or negedge HRESETn) begin
+  if (!HRESETn) begin
+    hrdata_q <= '0;
+  end else if (read_d ) begin
+    if (!addr_ok_d) begin
+      // Illegal address: data don't-care from master's POV, return 0
+      hrdata_q <= '0;
+    end else begin
+        unique case (ahb_reg_addr_e'(addr_d))
+        REG_STAT0: hrdata_q <= {30'h0, aes_busy, aes_done_sticky};
+        REG_CT0:   hrdata_q <= ct_reg[31:0];
+        REG_CT1:   hrdata_q <= ct_reg[63:32];
+        REG_CT2:   hrdata_q <= ct_reg[95:64];
+        REG_CT3:   hrdata_q <= ct_reg[127:96];
+        default:   hrdata_q <= '0;
+        endcase
+        end
+    end
+end
+
+assign HRDATA = hrdata_q;
+endmodule

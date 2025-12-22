@@ -1,0 +1,176 @@
+# # x: all
+
+# ###########################
+# # User Configuration
+# ###########################
+
+# UVM_VERBOSITY = UVM_HIGH
+# DPI_SRC = $(wildcard TB_files/dpi/*.cpp)
+
+# TB_SRC = \
+# 	TB_files/tran.sv \
+# 	TB_files/monitor.sv \
+# 	TB_files/driver.sv \
+# 	TB_files/agnt.sv \
+# 	TB_files/scrbrd.sv \
+# 	TB_files/envr.sv \
+# 	TB_files/seq_library.sv \
+# 	TB_files/test.sv\
+# 	# TB_files/aes_pkg.sv
+
+
+# SV_SRC = $(wildcard Design_files/*.sv)
+
+# ###########################
+# # Tools
+# ###########################
+
+# TEST       = /usr/bin/test
+# N_ERRS     = 0
+# N_FATALS   = 0
+
+# VCS        = vcs -full64 -sverilog \
+#                -kdb\
+#                -ntb_opts uvm-1.2 \
+#                -timescale=1ns/1ns \
+#                -debug_access+all \
+#                +vpi \
+#                -cpp g++ \
+#                -cm line+tgl+cond+branch+fsm -cm_dir cov\
+#                -CFLAGS "-O2 -Wall -std=c++17" \
+# 			   +incdir+TB_files\
+#                $(DPI_SRC)\
+#                $(TB_SRC)\
+#                $(SV_SRC)
+
+# SIMV       = ./simv +UVM_VERBOSITY=$(UVM_VERBOSITY) \
+#                +vcs+dumpvars+autoflush \
+# 				-cm_dir cov\
+#                -l vcs.log
+
+# # URG        = urg -format text -dir simv.vdb
+
+# VER =	verdi -dbdir simv.daidir/ 
+# # -cov -covdir cov.vdb
+
+# CHECK      = \
+# 	@$(TEST) \( `grep -c 'UVM_ERROR :    $(N_ERRS)' vcs.log` -eq 1 \) -a \
+# 	          \( `grep -c 'UVM_FATAL :    $(N_FATALS)' vcs.log` -eq 1 \)
+
+
+# ###########################
+# # Build & Run Targets
+# ###########################
+
+# all: compile run verdi
+
+# compile:
+# 	$(VCS) TB_files/Main_TB.sv -top tb -l comp.log
+
+# run:
+# 	$(SIMV)
+
+# # wave:
+# # 	$(URG)
+
+# verdi:
+# 	$(VER)
+
+
+
+# ###########################
+# # Clean
+# ###########################
+
+# clean:
+# 	rm -rf *~ core csrc simv* vc_hdrs.h ucli.key urg* *.log
+
+# x: all
+
+###########################
+# User Configuration
+###########################
+
+UVM_VERBOSITY = UVM_HIGH
+DPI_SRC = $(wildcard TB_files/dpi/*.cpp)
+
+TB_SRC = \
+	+incdir+Design_files\
+
+
+
+
+
+
+
+SV_SRC= 	+incdir+TB_files/
+
+###########################
+# Tools
+###########################
+
+TEST       = /usr/bin/test
+N_ERRS     = 0
+N_FATALS   = 0
+
+VCS        = vcs -full64 -sverilog \
+                $(SV_SRC)\
+               $(DPI_SRC)\
+               $(TB_SRC)\
+               -kdb\
+               -ntb_opts uvm-1.2 \
+               -timescale=1ns/1ns \
+               -debug_access+all \
+               +vpi \
+               -cpp g++ \
+               -cm line+tgl+cond+branch+fsm+assert -cm_dir cov\
+               -CFLAGS "-O2 -Wall -std=c++17" \
+
+            
+
+SIMV       = ./simv +UVM_VERBOSITY=$(UVM_VERBOSITY) \
+               +vcs+dumpvars+autoflush \
+				-cm_dir cov\
+               -l vcs.log
+
+# URG        = urg -format text -dir simv.vdb
+
+VER =	verdi -dbdir simv.daidir/  verdi -sim simv -assert-debug -full64 &
+
+# -cov -covdir cov.vdb
+
+CHECK      = \
+	@$(TEST) \( `grep -c 'UVM_ERROR :    $(N_ERRS)' vcs.log` -eq 1 \) -a \
+	          \( `grep -c 'UVM_FATAL :    $(N_FATALS)' vcs.log` -eq 1 \)
+
+
+###########################
+# Build & Run Targets
+###########################
+
+all: compile run verdi
+al:	compile	run
+
+compile:
+	$(VCS)	TB_files/Main_TB.sv	-top	tb	-l	comp.log
+
+run:
+	$(SIMV)
+
+# wave:
+# 	$(URG)
+
+verdi: 
+	$(VER)
+
+testf:
+	$(DPI_SRC)
+
+
+
+###########################
+# Clean
+###########################
+
+clean:
+	rm -rf *~ core csrc simv* vc_hdrs.h ucli.key urg* *.log *.vdb novas.* *.fsdb verdi_config_file verdiLog .fsm.sch.verilog.xml fsdbextractLog fsdbrecoverLog vdCovLog dump.vcd
