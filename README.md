@@ -7,25 +7,17 @@ Project for Soc Design, Follows a paper proposal for 8bitpath AES acclerator wit
 
 AES_core_Design_n_TB
 │
-├── Design_files/        # RTL design files for the AES Core(including BIST)
-│
-├── TB_files/            # Testbench files for AES Core (including BIST)
-│
-├── makefile.vcs         # Makefile used to compile, elaborate, simulate, and launch Verdi
-│
-└── readme_aes.txt       # Additional details on using makefile.vcs (this file)
-
+├── Design_files/    # RTL design files for the AES Core (including BIST)
+├── TB_files/        # Testbench files for AES Core (including BIST)
+├── makefile.vcs     # Compiles, elaborates, simulates, and launches Verdi
+└── readme_aes.txt   # Usage details for makefile.vcs
 
 Final_Design_n_TB
 │
-├── aes_core/        # AES core implementation (Will be instantiated in the Ahb design)
-│
-├── design/          # RTL design source files for the Overall Integrated Design
-│
+├── aes_core/        # AES core implementation (instantiated in AHB design)
+├── design/          # RTL source files for the overall integrated design
 ├── tb/              # Testbench files for the overall integrated design
-│
-├── makefile.vcs     # Makefile used to run simulation more information in readme_ip.txt
-│
+├── makefile.vcs     # Simulation script (see readme_ip.txt for details)
 └── readme_ip.txt    # Documentation on how to use the makefile.vcs
 
 
